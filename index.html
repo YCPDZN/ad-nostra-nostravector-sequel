@@ -52,6 +52,17 @@ h1 span{color:var(--amber)}
 #editLook{background:none;border:0;padding:0;color:var(--cyan);font-size:13px;text-align:left}
 #lookPanel{position:absolute;left:max(12px,env(safe-area-inset-left,0px));top:126px;width:min(290px,calc(100% - 24px));padding:12px;display:flex;flex-direction:column;gap:10px}
 #lookDone{align-self:flex-start;background:var(--amber);color:#1b1206;border:0;font-weight:600;padding:6px 16px}
+#meBtns{display:flex;justify-content:space-between;gap:10px}
+#menuBtn{background:none;border:0;padding:0;color:var(--amber);font-size:13px}
+#pause{position:absolute;inset:0;background:rgba(5,8,16,.72);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+#pause .box{width:min(360px,100%);padding:22px;display:flex;flex-direction:column;gap:10px;margin:auto}
+#pause h2{font-family:var(--display);font-size:20px;letter-spacing:.3em;margin:0 0 4px;text-transform:uppercase}
+#pause .box>button{background:rgba(255,255,255,.05);border:1px solid var(--line);padding:11px 14px;text-align:left;font-size:16px}
+#pause .box>button:hover{border-color:var(--amber)}
+#pause .box>button.pri{background:var(--amber);color:#1b1206;border-color:var(--amber);font-weight:600}
+#pause dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:6px 0 0;font-size:13px;color:var(--dim)}
+#pause dt{color:var(--text);font-weight:600;white-space:nowrap}#pause dd{margin:0}
+#pause small{color:var(--dim);font-size:12px;line-height:1.4}
 #enter{align-self:flex-start;background:var(--amber);color:#1b1206;border:0;font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:.3em;padding:15px 26px}
 #enter:hover{filter:brightness(1.1)}
 .keys{color:var(--dim);font-size:13px;line-height:1.5;margin:0}
@@ -131,7 +142,7 @@ h1 span{color:var(--amber)}
       <div class="bar"><i id="hpBar"></i></div>
       <div class="row"><span class="num" id="hpTxt"></span><span class="num" id="crTxt"></span></div>
       <div class="bar xp"><i id="xpBar"></i></div>
-      <button id="editLook">Edit appearance</button>
+      <div id="meBtns"><button id="editLook">Edit appearance</button><button id="menuBtn">Menu</button></div>
     </div>
     <div id="lookPanel" class="panel" hidden><div class="lbl">Appearance</div><div class="look" id="look2"></div><button id="lookDone">Done</button></div>
     <div id="tgt" class="panel" hidden>
@@ -152,6 +163,19 @@ h1 span{color:var(--amber)}
     <button id="prompt" hidden></button>
     <div id="bar" class="panel"></div>
     <div id="toast"></div>
+    <div id="pause" hidden>
+      <div class="box panel" role="dialog" aria-label="Pause menu">
+        <h2>Paused</h2>
+        <button id="pResume" class="pri">Resume</button>
+        <button id="pLook">Edit appearance</button>
+        <button id="pTitle">Save and return to main menu</button>
+        <dl>
+          <dt>W A S D</dt><dd>Move</dd><dt>Drag / scroll</dt><dd>Look / zoom</dd><dt>Tab or click</dt><dd>Target an enemy</dd>
+          <dt>1 – 4</dt><dd>Abilities</dd><dt>R</dt><dd>Use a stim</dd><dt>E</dt><dd>Talk</dd><dt>Space</dt><dd>Jump</dd><dt>Enter</dt><dd>Chat</dd><dt>P or Esc</dt><dd>Pause</dd>
+        </dl>
+        <small>Your own game is frozen while paused. Other players keep moving.</small>
+      </div>
+    </div>
     <div id="dlg" class="panel" hidden>
       <div><div id="dName"></div><div id="dRole"></div></div>
       <p id="dText"></p><div id="dOpts"></div>
@@ -167,7 +191,7 @@ h1 span{color:var(--amber)}
       <div class="field"><span class="lbl">Discipline</span><div class="classes" id="classes"></div></div>
       <div class="field"><span class="lbl">Appearance</span><div class="look" id="look"></div></div>
       <button id="enter">Enter the city</button>
-      <p class="keys"><kbd>W A S D</kbd> move · drag to look · scroll to zoom · <kbd>Tab</kbd> or click to target · <kbd>1</kbd>–<kbd>4</kbd> abilities · <kbd>R</kbd> stim · <kbd>E</kbd> talk · <kbd>Space</kbd> jump · <kbd>Enter</kbd> chat</p>
+      <p class="keys"><kbd>W A S D</kbd> move · drag to look · scroll to zoom · <kbd>Tab</kbd> or click to target · <kbd>1</kbd>–<kbd>4</kbd> abilities · <kbd>R</kbd> stim · <kbd>E</kbd> talk · <kbd>Space</kbd> jump · <kbd>Enter</kbd> chat · <kbd>P</kbd> pause</p>
     </div>
   </div>
 </div>
@@ -491,7 +515,7 @@ function foeMesh(type){
 const player={pos:new V3(0,0,14),yaw:Math.PI,vy:0,hp:1,target:null,auto:false,cd:[0,0,0,0,0],guard:0,combat:0,atk:0,dead:false,mesh:null,moving:false};
 let camYaw=0,camPitch=.32,camDist=11;
 const enemies=[],npcs=[],citizens=[],remotes=new Map(),fx=[],floats=[];
-let playing=false,dialog=null,time=0;
+let playing=false,paused=false,dialog=null,time=0;
 
 function spawnFoes(type,n,cx,cz,rad,l0,l1){for(let i=0;i<n;i++){const a=R()*6.283,r=Math.sqrt(R())*rad,lvl=l0+(R()*(l1-l0+1)|0),f=FOES[type];
   const e={type,f,lvl,home:new V3(cx+Math.sin(a)*r,0,cz+Math.cos(a)*r),pos:new V3(),mesh:foeMesh(type),state:'idle',atkT:1,stun:0,dot:0,dotM:0,dotA:0,dead:false,resp:0,wander:new V3(),wT:0,hit:0};
@@ -702,7 +726,7 @@ function hurt(e,dmg){if(e.dead)return;dmg=Math.max(1,Math.round(dmg*(.9+Math.ran
 function gainXp(x){S.xp+=x;while(S.xp>=need(S.lvl)){S.xp-=need(S.lvl);S.lvl++;player.hp=maxHp();toast('Level '+S.lvl);sys(`You reached level ${S.lvl}.`);ring(player.pos,6,0x5ee6ff,.8);pushPresence(true)}}
 function heal(a){const b=player.hp;player.hp=Math.min(maxHp(),player.hp+a);floatText(player.pos,2.2,'+'+Math.round(player.hp-b),'#6fe3a0')}
 function cast(i){
-  if(!playing||player.dead||dialog)return;
+  if(!playing||paused||player.dead||dialog)return;
   if(i===4){if(player.cd[4]>0)return;if(S.stims<1){toast('No stims');return}if(player.hp>=maxHp()){toast('Already at full health');return}S.stims--;player.cd[4]=8;heal(maxHp()*.5);save();hud();return}
   const C=CLASSES[S.cls],ab=C.ab[i];if(player.cd[i]>0)return;
   let t=player.target;
@@ -878,10 +902,12 @@ window.addEventListener('keydown',e=>{
   if(!playing)return;
   if(typing()){if(e.key==='Enter'&&document.activeElement===$('say')){sendChat($('say').value);$('say').value='';canvas.focus()}else if(e.key==='Escape')canvas.focus();return}
   const k=e.key.toLowerCase();
+  if(paused){if(k==='escape'||k==='p')setPause(false);return}
+  if(k==='p'&&!dialog){setPause(true);return}
   if(dialog){if(k==='escape')closeDialog();return}
   if(k==='enter'){$('say').focus();e.preventDefault();return}
   if(k==='tab'){e.preventDefault();cycleTarget();return}
-  if(k==='escape'){player.target=null;player.auto=false;return}
+  if(k==='escape'){if(player.target){player.target=null;player.auto=false}else setPause(true);return}
   if(k>='1'&&k<='4'){cast(+k-1);return}
   if(k==='r'){cast(4);return}
   if(k==='e'){const n=nearNpc();if(n)talk(n);return}
@@ -893,7 +919,7 @@ window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false});
 function cycleTarget(){const list=enemies.filter(e=>!e.dead&&d2(e.pos,player.pos)<45).sort((a,b)=>d2(a.pos,player.pos)-d2(b.pos,player.pos));if(!list.length){player.target=null;return}const i=list.indexOf(player.target);player.target=list[(i+1)%list.length]}
 // pointer: drag = look, tap = pick
 let drag=null;canvas.tabIndex=0;canvas.style.outline='none';
-canvas.addEventListener('pointerdown',e=>{if(!playing)return;canvas.focus();drag={id:e.pointerId,x:e.clientX,y:e.clientY,moved:0};try{canvas.setPointerCapture(e.pointerId)}catch(_){}});
+canvas.addEventListener('pointerdown',e=>{if(!playing||paused)return;canvas.focus();drag={id:e.pointerId,x:e.clientX,y:e.clientY,moved:0};try{canvas.setPointerCapture(e.pointerId)}catch(_){}});
 canvas.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.moved+=Math.abs(dx)+Math.abs(dy);drag.x=e.clientX;drag.y=e.clientY;if(drag.moved>6){camYaw-=dx*.006;camPitch=clamp(camPitch+dy*.005,-.05,1.3)}});
 const endDrag=e=>{if(!drag||drag.id!==e.pointerId)return;if(drag.moved<=6&&!dialog)pick(e.clientX,e.clientY);drag=null};
 canvas.addEventListener('pointerup',endDrag);canvas.addEventListener('pointercancel',()=>{drag=null});
@@ -929,6 +955,13 @@ function mountLook(el){el.textContent='';
 mountLook($('look'));setPlayerMesh();
 $('editLook').onclick=()=>{const p=$('lookPanel');p.hidden=!p.hidden;if(!p.hidden)mountLook($('look2'))};
 $('lookDone').onclick=()=>{$('lookPanel').hidden=true;canvas.focus()};
+function setPause(on){if(!playing)on=false;paused=on;$('pause').hidden=!on;for(const k in keys)keys[k]=false;if(on)$('pResume').focus();else canvas.focus()}
+function toTitle(){setPause(false);closeDialog();$('lookPanel').hidden=true;player.target=null;player.auto=false;playing=false;save();
+  player.pos.set(0,0,14);player.mesh.position.copy(player.pos);player.mesh.rotation.set(0,0,0);pickCls=S.cls;mountLook($('look'));
+  $('enter').textContent=`Continue · Lv ${S.lvl}`;$('hud').hidden=true;$('title').hidden=false}
+$('menuBtn').onclick=()=>setPause(true);$('pResume').onclick=()=>setPause(false);
+$('pLook').onclick=()=>{setPause(false);$('lookPanel').hidden=false;mountLook($('look2'))};
+$('pTitle').onclick=toTitle;
 CLASSES.forEach((c,i)=>{const b=document.createElement('button');b.className='cls';b.type='button';const t=document.createElement('b');t.textContent=c.name;const s=document.createElement('small');s.textContent=c.blurb;b.append(t,s);b.setAttribute('aria-pressed',i===pickCls);b.onclick=()=>{pickCls=i;[...$('classes').children].forEach((x,j)=>x.setAttribute('aria-pressed',j===i));setPlayerMesh()};$('classes').appendChild(b)});
 $('name').value=S.name;
 if(S.name)$('enter').textContent=`Continue · Lv ${S.lvl}`;
@@ -944,10 +977,10 @@ $('enter').onclick=start;$('name').addEventListener('keydown',e=>{if(e.key==='En
 const camT=new V3(),camP=new V3(),look=new V3();let mapT=0,hudT=0,last=performance.now();
 function frame(now){
   requestAnimationFrame(frame);
-  const dt=Math.min(.05,(now-last)/1000);last=now;time+=dt;
+  const dt=paused?0:Math.min(.05,(now-last)/1000);last=now;time+=dt;
   if(canvas.width!==Math.floor(canvas.clientWidth*renderer.getPixelRatio()))resize();
 
-  if(playing){
+  if(playing&&!paused){
     // movement
     let mx=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0)+joy.x,mz=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0)-joy.y;
     const ml=Math.hypot(mx,mz);player.moving=false;
@@ -1012,7 +1045,6 @@ function frame(now){
   for(let i=floats.length-1;i>=0;i--){const f=floats[i];f.life-=dt;f.p.y+=dt*1.6;proj.copy(f.p).project(camera);f.el.style.transform=`translate(${(proj.x*.5+.5)*canvas.clientWidth}px,${(-proj.y*.5+.5)*canvas.clientHeight}px) translate(-50%,-50%)`;f.el.style.opacity=proj.z>1?0:Math.min(1,f.life*2.5);if(f.life<=0){f.el.remove();floats.splice(i,1)}}
 }
 requestAnimationFrame(frame);
-
 })();
 </script>
 
